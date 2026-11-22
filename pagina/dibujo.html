@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENATI Proyecto - Dibujo de particulas</title>
+<link rel="stylesheet" href="estilos/estilos.css">
+</head>
+<body>
+
+  <canvas id="particles"></canvas>
+
+  <div id="hud">
+    <div id="stateLabel">Iniciando camara...</div>
+    <div id="fingerCount">Dedo: --</div>
+  </div>
+
+  <div id="camWrap" data-corner="top-right">
+    <video id="inputVideo" autoplay playsinline></video>
+    <canvas id="skeleton"></canvas>
+    <div id="camOffOverlay" hidden>Camara apagada</div>
+    <button id="camMoveBtn" class="iconBtn iconBtn--small" title="Mover camara a otra esquina">&#10530;</button>
+    <button id="camToggleBtn" class="iconBtn iconBtn--small" title="Apagar camara">&#128247;</button>
+  </div>
+
+  <div id="hint">
+    Pasa tu dedo indice frente a la camara por encima del dibujo o video para destruirlo: se arma solo otra vez.
+    Tambien funciona con el mouse.
+  </div>
+
+  <div id="controlsBar">
+    <div id="fontSizeControl" title="Tamano del dibujo">
+      <button id="tamanoDownBtn" class="stepBtn" title="Achicar dibujo">&#8722;</button>
+      <span id="fontSizeLabel"><span id="tamanoLabel">60%</span></span>
+      <button id="tamanoUpBtn" class="stepBtn" title="Agrandar dibujo">&#43;</button>
+    </div>
+    <button id="pausaBtn" class="iconBtn" title="Pausar" hidden>&#9208;</button>
+    <button id="sonidoBtn" class="iconBtn" title="Silenciar" hidden>&#128266;</button>
+    <button id="subirBtn" class="iconBtn" title="Subir otro dibujo o video (o arrastralo a la pantalla)">&#128444;</button>
+    <a href="index.html" class="iconBtn" title="Volver a las frases">Aa</a>
+  </div>
+
+  <input type="file" id="archivo" accept="image/*,video/*" hidden>
+  <div id="soltarAqui" hidden>Suelta tu dibujo o video aqui</div>
+
+  <!-- Dibujo del esqueleto de la mano (la deteccion corre en codigo/comun/detector.js) -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+
+  <script src="codigo/comun/motor.js"></script>
+  <script src="codigo/comun/camara.js"></script>
+  <script src="codigo/dibujo/video.js"></script>
+  <script src="codigo/dibujo/dibujo.js"></script>
+  <script src="codigo/dibujo/puno.js"></script>
+</body>
+</html>

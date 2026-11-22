@@ -1,0 +1,563 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --accent-cyan: #00e5ff;
+  --accent-cyan-rgb: 0, 229, 255;
+  --accent-magenta: #ff2fd6;
+  --accent-danger-rgb: 255, 60, 60;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+#particles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #000;
+}
+
+#hud {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  color: #fff;
+  text-shadow: 0 0 6px rgba(0,0,0,0.9);
+  font-size: 14px;
+  z-index: 10;
+  user-select: none;
+}
+
+#stateLabel {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+
+#fingerCount {
+  opacity: 0.8;
+}
+
+#camWrap {
+  position: fixed;
+  width: 220px;
+  height: 165px;
+  min-width: 140px;
+  min-height: 105px;
+  max-width: min(480px, 60vw);
+  max-height: min(360px, 60vh);
+  /* arrastrando desde la esquina inferior derecha se agranda o achica */
+  resize: both;
+  overflow: hidden;
+  border: 2px solid rgba(0, 229, 255, 0.6);
+  border-radius: 8px;
+  box-shadow: 0 0 18px rgba(0, 229, 255, 0.35);
+  z-index: 10;
+  background: #000;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#camWrap.cam-off {
+  border-color: rgba(255, 60, 60, 0.6);
+  box-shadow: 0 0 18px rgba(255, 60, 60, 0.35);
+}
+
+/* las 4 esquinas donde puede vivir la caja de camara; el boton "mover"
+   (ver app.js) va rotando entre estas 4 */
+#camWrap[data-corner="top-right"] {
+  top: 16px;
+  right: 16px;
+}
+
+#camWrap[data-corner="top-left"] {
+  top: 16px;
+  left: 16px;
+}
+
+#camWrap[data-corner="bottom-left"] {
+  bottom: 16px;
+  left: 16px;
+}
+
+#camWrap[data-corner="bottom-right"] {
+  bottom: 16px;
+  right: 16px;
+}
+
+/* pista visual de que la esquina se puede arrastrar (el "resizer" nativo del
+   navegador es muy discreto sobre fondo negro) */
+#camWrap::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, transparent 0 45%, rgba(0, 229, 255, 0.7) 45% 55%, transparent 55% 100%),
+    linear-gradient(135deg, transparent 0 65%, rgba(0, 229, 255, 0.7) 65% 75%, transparent 75% 100%);
+}
+
+#inputVideo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+#skeleton {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform: scaleX(-1);
+}
+
+#camOffOverlay {
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  background: #050507;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+}
+
+#camOffOverlay[hidden] {
+  display: none;
+}
+
+#camOffOverlay:not([hidden]) {
+  display: flex;
+}
+
+#camToggleBtn {
+  position: absolute;
+  bottom: 6px;
+  left: 6px; /* la esquina inferior derecha queda libre para la manija de resize */
+}
+
+#camMoveBtn {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+}
+
+#hint {
+  position: fixed;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,0.55);
+  font-size: 12px;
+  text-align: center;
+  max-width: 90%;
+  z-index: 10;
+  user-select: none;
+}
+
+/* Botones circulares de icono: camara, editar frases, menu de colores.
+   Comparten un mismo look "glass" con glow cian y los mismos 4 estados
+   (rest / hover / active / focus) para que se sientan como un solo sistema. */
+.iconBtn {
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(var(--accent-cyan-rgb), 0.5);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 0 14px rgba(var(--accent-cyan-rgb), 0.25);
+  transition: background 160ms ease-out, border-color 160ms ease-out,
+    box-shadow 160ms ease-out, transform 120ms ease-out;
+}
+
+.iconBtn:hover {
+  background: rgba(var(--accent-cyan-rgb), 0.22);
+  border-color: rgba(var(--accent-cyan-rgb), 0.85);
+  box-shadow: 0 0 20px rgba(var(--accent-cyan-rgb), 0.45);
+  transform: translateY(-2px) scale(1.06);
+}
+
+.iconBtn:active {
+  transform: scale(0.92);
+  background: rgba(var(--accent-cyan-rgb), 0.32);
+  box-shadow: 0 0 10px rgba(var(--accent-cyan-rgb), 0.35);
+}
+
+.iconBtn:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 3px;
+}
+
+/* variante chica: el boton de camara, que vive dentro del recuadro de video */
+.iconBtn--small {
+  width: 30px;
+  height: 30px;
+  font-size: 13px;
+}
+
+/* estado "apagado" (camara apagada): mismo sistema pero en rojo */
+.iconBtn.cam-off {
+  border-color: rgba(var(--accent-danger-rgb), 0.6);
+  background: rgba(var(--accent-danger-rgb), 0.2);
+  box-shadow: 0 0 14px rgba(var(--accent-danger-rgb), 0.3);
+}
+
+.iconBtn.cam-off:hover {
+  background: rgba(var(--accent-danger-rgb), 0.35);
+  border-color: rgba(var(--accent-danger-rgb), 0.9);
+  box-shadow: 0 0 20px rgba(var(--accent-danger-rgb), 0.5);
+}
+
+.iconBtn.cam-off:active {
+  background: rgba(var(--accent-danger-rgb), 0.45);
+}
+
+/* Barra que agrupa todos los controles inferior-derecha (tamano de letra,
+   cantidad de lineas, colores, editar frases): un solo contenedor flex en
+   vez de calcular a mano la posicion "right" de cada uno. */
+#controlsBar {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Control segmentado "1 / 2 / 3": elige en cuantas lineas se reparte la
+   frase. Mismo look glass que los botones de icono, con un boton relleno
+   (degrade cian-magenta) marcando cual esta activo. */
+#linesControl {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(var(--accent-cyan-rgb), 0.5);
+  box-shadow: 0 0 14px rgba(var(--accent-cyan-rgb), 0.25);
+}
+
+.linesBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease-out, color 160ms ease-out, transform 120ms ease-out;
+}
+
+.linesBtn:hover {
+  background: rgba(var(--accent-cyan-rgb), 0.2);
+  color: #fff;
+}
+
+.linesBtn:active {
+  transform: scale(0.88);
+}
+
+.linesBtn:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+}
+
+.linesBtn.active {
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+  color: #050508;
+  box-shadow: 0 0 10px rgba(var(--accent-cyan-rgb), 0.5);
+}
+
+.linesBtn.active:hover {
+  filter: brightness(1.1);
+}
+
+/* Control "- 100% +": tamano de letra, independiente de la cantidad de
+   lineas. Mismo look glass que el resto de la barra. */
+#fontSizeControl,
+#brilloControl {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(var(--accent-cyan-rgb), 0.5);
+  box-shadow: 0 0 14px rgba(var(--accent-cyan-rgb), 0.25);
+}
+
+.stepBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 160ms ease-out, color 160ms ease-out, transform 120ms ease-out;
+}
+
+.stepBtn:hover {
+  background: rgba(var(--accent-cyan-rgb), 0.2);
+  color: #fff;
+}
+
+.stepBtn:active {
+  transform: scale(0.88);
+}
+
+.stepBtn:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+}
+
+.stepBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+#fontSizeLabel,
+#brilloLabel {
+  min-width: 36px;
+  text-align: center;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
+  user-select: none;
+}
+
+#editPanel,
+#menuPanel {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 20;
+  align-items: center;
+  justify-content: center;
+}
+
+#editPanel[hidden],
+#menuPanel[hidden] {
+  display: none;
+}
+
+#editPanel:not([hidden]),
+#menuPanel:not([hidden]) {
+  display: flex;
+}
+
+#editBox,
+#menuBox {
+  background: #0b0b12;
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  border-radius: 10px;
+  padding: 24px;
+  width: min(560px, 92vw);
+  max-height: 86vh;
+  overflow-y: auto;
+  color: #fff;
+}
+
+#editBox h2,
+#menuBox h2 {
+  font-size: 17px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.colorRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.colorRow label {
+  width: 64px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.colorRow input[type="color"] {
+  flex: 1;
+  height: 40px;
+  padding: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#menuActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.editRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.editRow label {
+  width: 64px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.editRow input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #fff;
+  font-size: 14px;
+}
+
+.editRow input:focus {
+  outline: none;
+  border-color: rgba(0, 229, 255, 0.7);
+}
+
+#editActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* Botones de accion de los paneles (Guardar / Cancelar): un primario en
+   degrade cian-magenta que retoma la paleta de las particulas, y un
+   secundario tipo "ghost". Mismos 4 estados que los botones de icono. */
+.btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition: transform 100ms ease-out, box-shadow 160ms ease-out,
+    filter 160ms ease-out, background 160ms ease-out, border-color 160ms ease-out;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+  color: #050508;
+  box-shadow: 0 4px 16px rgba(var(--accent-cyan-rgb), 0.35);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 6px 20px rgba(var(--accent-cyan-rgb), 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: scale(0.96);
+  filter: brightness(0.94);
+  box-shadow: 0 2px 10px rgba(var(--accent-cyan-rgb), 0.3);
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.32);
+  transform: translateY(-1px);
+}
+
+.btn-secondary:active {
+  transform: scale(0.96);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.btn-secondary:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 3px;
+}
+
+/* Botones que son enlaces (ir a la pagina de dibujos / volver a frases) */
+a.iconBtn {
+  text-decoration: none;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* Aviso al arrastrar una imagen sobre la pagina de dibujos */
+#soltarAqui {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: #fff;
+  background: rgba(0, 229, 255, 0.12);
+  border: 4px dashed var(--accent-cyan);
+}
+
+#soltarAqui[hidden] {
+  display: none;
+}
+
+#soltarAqui:not([hidden]) {
+  display: flex;
+}
+
+.iconBtn[hidden] {
+  display: none;
+}

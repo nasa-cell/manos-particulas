@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENATI Proyecto - Particulas por Gestos</title>
+<link rel="stylesheet" href="estilos/estilos.css">
+</head>
+<body>
+
+  <canvas id="particles"></canvas>
+
+  <div id="hud">
+    <div id="stateLabel">Iniciando camara...</div>
+    <div id="fingerCount">Manos: -- + -- = --</div>
+  </div>
+
+  <div id="camWrap" data-corner="top-right">
+    <video id="inputVideo" autoplay playsinline></video>
+    <canvas id="skeleton"></canvas>
+    <div id="camOffOverlay" hidden>Camara apagada</div>
+    <button id="camMoveBtn" class="iconBtn iconBtn--small" title="Mover camara a otra esquina">&#10530;</button>
+    <button id="camToggleBtn" class="iconBtn iconBtn--small" title="Apagar camara">&#128247;</button>
+  </div>
+
+  <div id="hint">
+    Muestra los dedos de una o dos manos (suma 1 a 10) para formar cada frase.
+    Sin gesto reconocido, las particulas quedan dispersas.
+  </div>
+
+  <div id="controlsBar">
+    <div id="fontSizeControl" title="Tamano de letra">
+      <button id="fontSizeDownBtn" class="stepBtn" title="Achicar letra">&#8722;</button>
+      <span id="fontSizeLabel">100%</span>
+      <button id="fontSizeUpBtn" class="stepBtn" title="Agrandar letra">&#43;</button>
+    </div>
+
+    <div id="brilloControl" title="Brillo del neon">
+      <button id="brilloDownBtn" class="stepBtn" title="Bajar brillo">&#8722;</button>
+      <span id="brilloLabel">&#9728; 100%</span>
+      <button id="brilloUpBtn" class="stepBtn" title="Subir brillo">&#43;</button>
+    </div>
+
+    <div id="linesControl" title="Cantidad de lineas para la frase">
+      <button class="linesBtn" data-lines="1">1</button>
+      <button class="linesBtn" data-lines="2">2</button>
+      <button class="linesBtn" data-lines="3">3</button>
+    </div>
+
+    <a href="dibujo.html" class="iconBtn" title="Dibujos con particulas">&#128444;</a>
+    <button id="menuBtn" class="iconBtn" title="Cambiar colores">&#9776;</button>
+    <button id="editBtn" class="iconBtn" title="Editar frases">&#9998;</button>
+  </div>
+
+  <div id="editPanel" hidden>
+    <div id="editBox">
+      <h2>Editar las 10 frases</h2>
+      <div id="editFields"></div>
+      <div id="editActions">
+        <button id="saveBtn" class="btn btn-primary">Guardar</button>
+        <button id="cancelBtn" class="btn btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="menuPanel" hidden>
+    <div id="menuBox">
+      <h2>Colores de las particulas</h2>
+      <div class="colorRow">
+        <label for="colorInput0">Color 1</label>
+        <input type="color" id="colorInput0">
+      </div>
+      <div class="colorRow">
+        <label for="colorInput1">Color 2</label>
+        <input type="color" id="colorInput1">
+      </div>
+      <div id="menuActions">
+        <button id="colorSaveBtn" class="btn btn-primary">Guardar</button>
+        <button id="colorCancelBtn" class="btn btn-secondary">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dibujo del esqueleto de la mano (la deteccion corre en codigo/comun/detector.js) -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+
+  <script src="codigo/comun/motor.js"></script>
+  <script src="codigo/comun/camara.js"></script>
+  <script src="codigo/frases/frases.js"></script>
+  <script src="codigo/frases/texto.js"></script>
+  <script src="codigo/frases/gestos.js"></script>
+  <script src="codigo/frases/paneles.js"></script>
+</body>
+</html>
