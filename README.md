@@ -36,6 +36,7 @@ pagina/                      todo lo que se publica
 │  ├─ comun/
 │  │  ├─ motor.js            mueve y dibuja las partículas (sirve a las dos páginas)
 │  │  ├─ camara.js           cámara, esqueleto de la mano y botones de cámara
+│  │  ├─ dedos.js            cuenta los dedos por el ángulo de cada dedo en 3D
 │  │  └─ detector.js         detector de manos en un hilo aparte
 │  ├─ frases/
 │  │  ├─ frases.js           frases, colores y frase → partículas

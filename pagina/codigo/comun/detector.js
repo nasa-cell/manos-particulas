@@ -18,32 +18,59 @@ importScripts("../../librerias/mediapipe/vision_bundle.js");
 const { FilesetResolver, HandLandmarker } = self.module.exports;
 
 let detector = null;
+let archivosVision = null;
+let usa = "";
+let medidos = 0, msTotal = 0;
 let ultimoTiempo = 0;
 let lienzo = null;
 let lctx = null;
 
+const opciones = (delegate) => ({
+  baseOptions: { modelAssetPath: MODELO, delegate },
+  runningMode: "VIDEO",
+  numHands: 2,
+  minHandDetectionConfidence: 0.35,
+  minHandPresenceConfidence: 0.35,
+  minTrackingConfidence: 0.35,
+});
+
+// Primero intenta con la tarjeta de video (GPU): detecta mas rapido y sigue
+// mejor la mano. Si esta PC no puede, usa el procesador (CPU).
 async function crearDetector() {
-  const archivos = await FilesetResolver.forVisionTasks(`${BASE}/wasm`);
-  detector = await HandLandmarker.createFromOptions(archivos, {
-    baseOptions: { modelAssetPath: MODELO, delegate: "CPU" },
-    runningMode: "VIDEO",
-    numHands: 2,
-    minHandDetectionConfidence: 0.35,
-    minHandPresenceConfidence: 0.35,
-    minTrackingConfidence: 0.35,
-  });
-  self.postMessage({ tipo: "listo" });
+  archivosVision = await FilesetResolver.forVisionTasks(`${BASE}/wasm`);
+  const archivos = archivosVision;
+  usa = "GPU";
+  try {
+    detector = await HandLandmarker.createFromOptions(archivos, opciones("GPU"));
+  } catch (err) {
+    usa = "CPU";
+    detector = await HandLandmarker.createFromOptions(archivos, opciones("CPU"));
+  }
+  self.postMessage({ tipo: "listo", usa });
 }
 
 crearDetector().catch((err) => {
   self.postMessage({ tipo: "error", mensaje: String(err && err.message ? err.message : err) });
 });
 
+// Con la GPU, las primeras 15 detecciones se miden: si tarda mas de 30 ms
+// en promedio (tarjeta de video lenta), se cambia al procesador.
+function revisarVelocidad(ms) {
+  if (usa !== "GPU" || medidos >= 15) return;
+  medidos++;
+  if (medidos > 3) msTotal += ms; // las primeras son lentas siempre (se esta preparando)
+  if (medidos === 15 && msTotal / 12 > 30) {
+    usa = "CPU";
+    const viejo = detector;
+    HandLandmarker.createFromOptions(archivosVision, opciones("CPU")).then((d) => { detector = d; viejo.close(); self.postMessage({ tipo: "listo", usa }); });
+  }
+}
+
 self.onmessage = (e) => {
   const { cuadro, tiempo } = e.data;
   if (!detector) {
     cuadro.close();
-    self.postMessage({ tipo: "resultado", manos: [], lados: [] });
+    self.postMessage({ tipo: "resultado", manos: [], lados: [], mundos: [] });
     return;
   }
   // el detector exige tiempos siempre crecientes
@@ -57,12 +84,17 @@ self.onmessage = (e) => {
   lctx.filter = "brightness(1.2) contrast(1.15)";
   lctx.drawImage(cuadro, 0, 0);
   cuadro.close();
+  const inicio = performance.now();
   const res = detector.detectForVideo(lienzo, t);
+  revisarVelocidad(performance.now() - inicio);
   self.postMessage({
     tipo: "resultado",
     // solo x, y, z: el campo "visibility" viene en 0 y drawing_utils no
     // dibujaria el esqueleto
     manos: (res.landmarks || []).map((mano) => mano.map((p) => ({ x: p.x, y: p.y, z: p.z }))),
     lados: (res.handedness || []).map((h) => ({ label: h[0] ? h[0].categoryName : "Right" })),
+    // los mismos 21 puntos en metros y en 3D (centro en la mano): sirven para
+    // medir el angulo de cada dedo sin importar como este girada la mano
+    mundos: (res.worldLandmarks || []).map((mano) => mano.map((p) => ({ x: p.x, y: p.y, z: p.z }))),
   });
 };

@@ -7,10 +7,9 @@ const PUNO_ESPERA_MS = 150;   // el puno tiene que verse este tiempo seguido
 const SOLTAR_ESPERA_MS = 350; // y la mano abierta este tiempo para rearmar
 let punoDesde = 0, abiertaDesde = 0, espacio = false;
 
-// un dedo esta doblado si su punta queda mas cerca de la muneca que su nudillo del medio
-function esPuno(p) {
-  const d = (a) => Math.hypot(a.x - p[0].x, a.y - p[0].y);
-  return [[8, 6], [12, 10], [16, 14], [20, 18]].every(([punta, medio]) => d(p[punta]) < d(p[medio]));
+// puno = ningun dedo levantado (mismo conteo que la pagina de frases, ver codigo/comun/dedos.js)
+function esPuno(puntos, mundo) {
+  return contarDedos(puntos, mundo) === 0;
 }
 
 function verPuno(puno) {

@@ -75,45 +75,24 @@ function handleGesture(sum, handsPresent) {
 }
 
 // ---------------------------------------------------------
-// Conteo de dedos con MediaPipe Hands
+// Suavizado: se usa el numero de dedos que mas se repitio en los ultimos
+// cuadros, asi un cuadro mal detectado no cambia la frase
 // ---------------------------------------------------------
 
-function countFingers(landmarks, handednessLabel) {
-  let count = 0;
+const SUAVIZADO_CUADROS = 5;
+const ultimasSumas = [];
 
-  // margen de "dedo extendido" relativo al tamano de la mano en la imagen
-  // (muneca -> nudillo del medio, un tamano de referencia estable), en vez
-  // de un valor fijo: con un margen fijo, una mano lejos (chica en la
-  // imagen) tiene distancias dedo-nudillo mas chicas tambien, y deja de
-  // superar el margen aunque el dedo este bien extendido (se pierden dedos,
-  // sobre todo pulgar y menique, al alejarse de la camara)
-  const wrist = landmarks[0];
-  const midMcp = landmarks[9];
-  const handScale = Math.hypot(midMcp.x - wrist.x, midMcp.y - wrist.y);
-  const margin = handScale * 0.15;
-
-  // dedos indice, medio, anular, menique: extendido si la punta esta
-  // por encima (menor y) que su articulacion media
-  const tips = [8, 12, 16, 20];
-  const pips = [6, 10, 14, 18];
-  for (let i = 0; i < 4; i++) {
-    if (landmarks[tips[i]].y < landmarks[pips[i]].y - margin) count++;
+function sumaSuavizada(sum) {
+  ultimasSumas.push(sum);
+  if (ultimasSumas.length > SUAVIZADO_CUADROS) ultimasSumas.shift();
+  const veces = new Map();
+  let mejor = sum, mejorVeces = 0;
+  for (const n of ultimasSumas) {
+    const v = (veces.get(n) || 0) + 1;
+    veces.set(n, v);
+    if (v > mejorVeces || (v === mejorVeces && n === sum)) { mejor = n; mejorVeces = v; }
   }
-
-  // pulgar: se compara contra la base del menique (nudillo 17) en vez de
-  // la muneca. Al doblar el pulgar, este cruza por delante de la palma (se
-  // acerca al lado del menique) en vez de acercarse a la muneca, asi que
-  // comparar contra la muneca casi siempre daba "extendido" aunque
-  // estuviera doblado. Extendido = la punta queda mas lejos de esa base
-  // que su propio nudillo (2), sin importar la orientacion de la mano.
-  const thumbTip = landmarks[4];
-  const thumbMcp = landmarks[2];
-  const pinkyMcp = landmarks[17];
-  const tipDist = Math.hypot(thumbTip.x - pinkyMcp.x, thumbTip.y - pinkyMcp.y);
-  const mcpDist = Math.hypot(thumbMcp.x - pinkyMcp.x, thumbMcp.y - pinkyMcp.y);
-  if (tipDist > mcpDist + margin) count++;
-
-  return count;
+  return mejor;
 }
 
 // ---------------------------------------------------------
@@ -123,11 +102,11 @@ function countFingers(landmarks, handednessLabel) {
 let puntoPuno = null; // centro de la mano cerrada en puno (pixeles reales), o null
 
 const camara = crearCamara({
-  alVerManos(manos, lados) {
+  alVerManos(manos, lados, mundos) {
     let sum = 0;
     puntoPuno = null;
     manos.forEach((landmarks, i) => {
-      const dedosMano = countFingers(landmarks, lados[i]?.label || "Right");
+      const dedosMano = contarDedos(landmarks, mundos[i]); // ver codigo/comun/dedos.js
       sum += dedosMano;
       if (dedosMano === 0 && !puntoPuno) {
         // centro de la palma (punto 9); la camara se ve como espejo
@@ -138,6 +117,8 @@ const camara = crearCamara({
       manos.length === 0 ? "Manos: no detectadas"
         : manos.length === 2 ? `Manos: suma = ${sum} / 10`
           : `Manos: 1 mano = ${sum}`;
+    sum = manos.length ? sumaSuavizada(sum) : 0;
+    if (!manos.length) ultimasSumas.length = 0;
     handleGesture(sum, manos.length > 0);
   },
   alPrender() { if (currentDisplay === "idle") stateLabel.textContent = "En reposo"; },

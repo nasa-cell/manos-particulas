@@ -2,7 +2,7 @@
 // Camara + detector de manos, comun a las dos paginas.
 //
 //   const camara = crearCamara({
-//     alVerManos(manos, lados) { ... },  // cada resultado del detector
+//     alVerManos(manos, lados, mundos) { ... },  // cada resultado del detector
 //     alApagar() { ... },                // al apagar la camara con su boton
 //     alPrender() { ... },               // cuando la camara ya esta funcionando
 //     alFallar(mensaje) { ... },         // sin camara o sin detector
@@ -56,7 +56,9 @@ function crearCamara(opciones) {
     const msg = e.data;
     if (msg.tipo === "resultado") {
       detectorOcupado = false;
-      verResultado(msg.manos, msg.lados);
+      verResultado(msg.manos, msg.lados, msg.mundos || []);
+    } else if (msg.tipo === "listo") {
+      camara.detectaCon = msg.usa;
     } else if (msg.tipo === "error") {
       fallar("No se pudo cargar el detector de manos (revisa el internet)", msg.mensaje);
     }
@@ -81,7 +83,7 @@ function crearCamara(opciones) {
     ctx.scale((cropW * coverScale) / boxW, (cropH * coverScale) / boxH);
   }
 
-  function verResultado(manos, lados) {
+  function verResultado(manos, lados, mundos) {
     if (!encendida) return; // llego tarde un resultado de cuando la camara estaba prendida
     skeletonCanvas.width = skeletonCanvas.clientWidth;
     skeletonCanvas.height = skeletonCanvas.clientHeight;
@@ -92,7 +94,7 @@ function crearCamara(opciones) {
       drawLandmarks(sctx, puntos, { color: "#ff2fd6", lineWidth: 1, radius: 3 });
     }
     sctx.restore();
-    opciones.alVerManos(manos, lados);
+    opciones.alVerManos(manos, lados, mundos);
   }
 
   async function prender() {
@@ -168,7 +170,9 @@ function crearCamara(opciones) {
     localStorage.setItem(CAM_CORNER_STORAGE_KEY, camWrap.dataset.corner);
   });
 
-  return {
+  const camara = {
+    detectaCon: "", // "GPU" o "CPU", cuando el detector ya cargo
     get encendida() { return encendida; },
   };
+  return camara;
 }

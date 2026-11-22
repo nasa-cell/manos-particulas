@@ -190,11 +190,11 @@ motor.alDibujar = (ctx) => {
 // ---------------------------------------------------------
 
 const camara = crearCamara({
-  alVerManos(manos) {
+  alVerManos(manos, lados, mundos) {
     const nuevos = [];
     let puno = null;
     manos.forEach((puntos, i) => {
-      if (!puno && esPuno(puntos)) puno = { x: (1 - puntos[9].x) * motor.ancho, y: puntos[9].y * motor.alto };
+      if (!puno && esPuno(puntos, mundos[i])) puno = { x: (1 - puntos[9].x) * motor.ancho, y: puntos[9].y * motor.alto };
       // punta del indice (punto 8). La camara se ve como espejo, por eso x se invierte.
       const x = (1 - puntos[8].x) * motor.ancho;
       const y = puntos[8].y * motor.alto;
