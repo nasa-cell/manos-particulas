@@ -33,9 +33,6 @@ const EXPLOSION = { velocidad: 2.2, freno: 2.2, deriva: 0.03 };
 // como vuelve cada particula a su lugar.
 const EFECTO_DESARMA = { radio: 0.18, fuerza: 40000, rigidez: 30, freno: 8, azar: 0.4 };
 
-// Modo 3D: cuanto gira la figura siguiendo la mano (radianes) y el
-// balanceo suave cuando no hay mano.
-const GIRO_3D = { maxY: 0.45, maxX: 0.3, balanceoY: 0.25, balanceoX: 0.12 };
 // Si en 3D la PC no llega a esta cantidad de cuadros por segundo, se avisa
 // a la pagina (motor.alLento) para que use menos bolitas.
 const CUADROS_MINIMOS_3D = 25;
@@ -63,7 +60,7 @@ function crearMotor(canvas) {
   // solo modo 3D: pedacito de imagen (u, v), relieve, profundidad extra al
   // explotar (zl, vz) y donde se vio cada bolita en pantalla (qx, qy)
   let uu, vv, z0, zl, vz, qx, qy, datos3d, uv3d, uvCambio = true;
-  let centroX = 0, centroY = 0, giroX = 0, giroY = 0;
+  let centroX = 0, centroY = 0;
   let lentoDesde = 0, cuadrosLentos = 0, cuadrosMedidos = 0;
   let tViaje = 0, disperso = false, proximaDispersion = 0, quieto = false, libre = false;
 
@@ -73,7 +70,6 @@ function crearMotor(canvas) {
     punteros: [],   // en pixeles reales de la pantalla (ver "escala")
     punto: PUNTO_PX, // lado de cada particula en pixeles reales: 1 o 2
     bolitas: null,   // modo 3D: lo que devuelve crearBolitas3D() (null = plano)
-    mirar: null,     // { x, y }: hacia donde gira en 3D (si no, el primer puntero)
     alLento: null,   // funcion: la PC va lenta en 3D (conviene usar menos bolitas)
     escalaForzada: null,
     alDibujar: null, // funcion opcional para dibujar algo encima (por ejemplo, el cursor del dedo)
@@ -228,24 +224,12 @@ function crearMotor(canvas) {
     return n;
   };
 
-  // ---- modo 3D: giro, perspectiva y lista para la tarjeta grafica ----
-  let giroCos = [1, 0, 1, 0], foco = 1, relieve = 0, tamano3d = 0;
+  // ---- modo 3D: perspectiva y lista para la tarjeta grafica ----
+  // La figura queda quieta y de frente: solo tiene relieve y perspectiva.
+  let foco = 1, relieve = 0, tamano3d = 0;
 
-  function prepararGiro(t, dts) {
+  function prepararPerspectiva() {
     const b = motor.bolitas;
-    const mira = motor.mirar || motor.punteros[0];
-    let objY, objX;
-    if (mira) {
-      objY = Math.max(-1, Math.min(1, (mira.x - centroX) / (W / 2))) * GIRO_3D.maxY;
-      objX = -Math.max(-1, Math.min(1, (mira.y - centroY) / (H / 2))) * GIRO_3D.maxX;
-    } else {
-      objY = Math.sin(t / 1600) * GIRO_3D.balanceoY;
-      objX = Math.sin(t / 2100) * GIRO_3D.balanceoX;
-    }
-    const suave = Math.min(1, dts * 4);
-    giroY += (objY - giroY) * suave;
-    giroX += (objX - giroX) * suave;
-    giroCos = [Math.cos(giroY), Math.sin(giroY), Math.cos(giroX), Math.sin(giroX)];
     foco = H * 1.6;
     relieve = b.relieve * H;
     tamano3d = b.tamano;
@@ -253,15 +237,12 @@ function crearMotor(canvas) {
 
   // x, y: donde va la bolita en el plano; zExtra: lo que salio hacia adelante (negativo)
   function guardar3d(i, x, y, zExtra) {
-    const cY = giroCos[0], sY = giroCos[1], cX = giroCos[2], sX = giroCos[3];
     x -= centroX; y -= centroY;
-    const z = z0[i] * relieve + zExtra;
-    const x2 = x * cY + z * sY, z2 = -x * sY + z * cY;
-    const y2 = y * cX - z2 * sX, z3 = y * sX + z2 * cX;
+    const z3 = z0[i] * relieve + zExtra;
     const k = foco / (foco + z3);
     const o = i * 4;
-    qx[i] = datos3d[o] = centroX + x2 * k;
-    qy[i] = datos3d[o + 1] = centroY + y2 * k;
+    qx[i] = datos3d[o] = centroX + x * k;
+    qy[i] = datos3d[o + 1] = centroY + y * k;
     datos3d[o + 2] = Math.max(-0.99, Math.min(0.99, z3 / H));
     datos3d[o + 3] = Math.max(1, tamano3d * k);
   }
@@ -306,7 +287,7 @@ function crearMotor(canvas) {
     const ahoraS = (t - tViaje) / 1000;
     const uno = motor.punto === 1;
     let moviendose = 0;
-    if (b3) prepararGiro(t, dts);
+    if (b3) prepararPerspectiva();
 
     if (libre) {
       // sueltas despues de explotar: frenan, flotan despacio y rebotan en los bordes
@@ -343,7 +324,7 @@ function crearMotor(canvas) {
 
       if (ef) {
         // empuje de cada dedo + resorte que devuelve la particula a su lugar
-        // (en 3D se mide desde donde se ve la bolita, ya girada)
+        // (en 3D se mide desde donde se ve la bolita, con su relieve)
         const vistaX = b3 ? qx[i] : fx + ox[i], vistaY = b3 ? qy[i] : fy + oy[i];
         for (let k = 0; k < punteros.length; k++) {
           const ddx = vistaX - punteros[k].x, ddy = vistaY - punteros[k].y;
