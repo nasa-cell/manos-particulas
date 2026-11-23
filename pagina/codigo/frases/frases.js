@@ -81,9 +81,51 @@ window.addEventListener("resize", () => {
 // Frase -> destinos de las particulas
 // ---------------------------------------------------------
 
+// Modo 3D: letras de bolitas infladas. Cada bolita mide BOLITA_3D pixeles de
+// pantalla; el borde de la letra queda atras y el centro sale hacia adelante.
+const BOLITA_3D = 6;
+const MAX_BOLITAS_3D = 15000;
+let calidad3d = 1; // 1 = normal; mas grande = bolitas mas grandes (si la PC va lenta)
+
+function applyTextTarget3D(borde, relleno) {
+  // las bolitas van en una cuadricula pareja sobre la letra: una por casilla
+  // que la letra cubre en buena parte
+  const S = TEXT_SAMPLE_SCALE;
+  const area = (borde.length + relleno.length) / (S * S);
+  let lado = BOLITA_3D * motor.escala * calidad3d;
+  if (area / (lado * lado) > MAX_BOLITAS_3D) lado = Math.sqrt(area / MAX_BOLITAS_3D);
+  const columnas = Math.ceil(motor.ancho / lado), filas = Math.ceil(motor.alto / lado);
+  const cuenta = new Uint16Array(columnas * filas);
+  for (const p of borde) cuenta[((p[1] / lado) | 0) * columnas + ((p[0] / lado) | 0)]++;
+  for (const p of relleno) cuenta[((p[1] / lado) | 0) * columnas + ((p[0] / lado) | 0)]++;
+  const minimo = Math.max(1, lado * S * lado * S * 0.35);
+  const llena = (c, f) => c >= 0 && f >= 0 && c < columnas && f < filas && cuenta[f * columnas + c] >= minimo;
+  const casillas = [];
+  for (let f = 0; f < filas; f++) for (let c = 0; c < columnas; c++) {
+    if (!llena(c, f)) continue;
+    const orilla = !llena(c - 1, f) || !llena(c + 1, f) || !llena(c, f - 1) || !llena(c, f + 1);
+    casillas.push([c, f, orilla]);
+  }
+  if (!casillas.length) { motor.dispersar(); return; }
+
+  const b = motor.bolitas;
+  b.tamano = lado * 1.3;
+  b.relieve = 0.03;
+  b.textura = null;
+  const colores = COLOR_PALETTE.map(hexAColor);
+  motor.fijarDestinos(casillas.length, (i) => {
+    const [c, f, orilla] = casillas[i];
+    let [r, g, bl] = colores[i % colores.length];
+    // la orilla de la letra un poco mas clara y atras; el centro sale adelante (inflada)
+    if (orilla) { r += (255 - r) * 0.3; g += (255 - g) * 0.3; bl += (255 - bl) * 0.3; }
+    return [(c + 0.5) * lado, (f + 0.5) * lado, colorRGBA(r | 0, g | 0, bl | 0), 0, 0, orilla ? 0.3 : -1];
+  });
+}
+
 function applyTextTarget(text) {
   const { borde, relleno } = getTextPoints(text, motor.ancho, motor.alto);
   if (borde.length === 0) { motor.dispersar(); return; }
+  if (motor.bolitas) { applyTextTarget3D(borde, relleno); return; }
   const lista2 = relleno.length ? relleno : borde;
   // con mas pixeles reales (escala de Windows) se usan mas puntos para que la letra siga igual de llena
   const total = Math.round(PARTICLE_COUNT * motor.escala * motor.escala);

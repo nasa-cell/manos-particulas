@@ -187,3 +187,19 @@ linesButtons.forEach((btn) => {
 });
 
 updateLinesButtonsUI();
+
+// ---------------------------------------------------------
+// Boton "3D" (ver codigo/comun/bolitas3d.js): letras de bolitas infladas
+// ---------------------------------------------------------
+
+prepararBoton3D(motor, () => {
+  calidad3d = 1;
+  redibujarFrase();
+});
+
+// si la PC va lenta en 3D: bolitas mas grandes (menos cantidad), hasta el doble
+motor.alLento = () => {
+  if (calidad3d >= 2) return;
+  calidad3d = Math.min(2, calidad3d * 1.25);
+  redibujarFrase();
+};

@@ -163,7 +163,9 @@ html, body {
 
 #hint {
   position: fixed;
-  bottom: 14px;
+  /* encima de la barra de botones (16 px de margen + 44 px de alto + espacio):
+     asi la barra no tapa el texto en ninguna pantalla */
+  bottom: 72px;
   left: 50%;
   transform: translateX(-50%);
   color: rgba(255,255,255,0.55);
@@ -560,4 +562,28 @@ a.iconBtn {
 
 .iconBtn[hidden] {
   display: none;
+}
+
+/* Boton "3D": prende las bolitas con volumen. Encendido se rellena de cian. */
+.boton3d {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.boton3d.encendido {
+  background: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  color: #050508;
+  box-shadow: 0 0 20px rgba(var(--accent-cyan-rgb), 0.6);
+}
+
+.boton3d.encendido:hover {
+  background: var(--accent-cyan);
+  color: #050508;
+}
+
+.boton3d:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }

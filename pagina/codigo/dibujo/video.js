@@ -19,6 +19,14 @@ function colorearConVideo() {
   ultimoTiempoVideo = v.currentTime;
   const { lienzo, lctx, columnas, filas, celdas, tabla } = cuadricula;
   lctx.drawImage(v, 0, 0, lienzo.width, lienzo.height);
+  if (motor.bolitas) {
+    // en 3D los colores salen solos del video (cada bolita muestra su
+    // pedacito); aqui solo se actualiza el relieve: lo claro sale adelante
+    const datos = lctx.getImageData(0, 0, columnas, filas).data;
+    for (let i = 0; i < celdas.length; i++) tabla[i] = relieveDe(datos, celdas[i]);
+    motor.cambiarRelieve(tabla);
+    return;
+  }
   const px32 = new Uint32Array(lctx.getImageData(0, 0, columnas, filas).data.buffer);
   for (let i = 0; i < celdas.length; i++) tabla[i] = px32[celdas[i]] | 0xff000000;
   motor.recolorear(tabla);

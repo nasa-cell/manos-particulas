@@ -105,6 +105,8 @@ const camara = crearCamara({
   alVerManos(manos, lados, mundos) {
     let sum = 0;
     puntoPuno = null;
+    // en 3D la frase gira hacia la mano (centro de la palma de la primera mano)
+    motor.mirar = manos.length ? { x: (1 - manos[0][9].x) * motor.ancho, y: manos[0][9].y * motor.alto } : null;
     manos.forEach((landmarks, i) => {
       const dedosMano = contarDedos(landmarks, mundos[i]); // ver codigo/comun/dedos.js
       sum += dedosMano;
@@ -122,7 +124,7 @@ const camara = crearCamara({
     handleGesture(sum, manos.length > 0);
   },
   alPrender() { if (currentDisplay === "idle") stateLabel.textContent = "En reposo"; },
-  alApagar() { fingerCountLabel.textContent = "Manos: camara apagada"; },
+  alApagar() { motor.mirar = null; fingerCountLabel.textContent = "Manos: camara apagada"; },
   alFallar(mensaje) { stateLabel.textContent = mensaje; },
 });
 

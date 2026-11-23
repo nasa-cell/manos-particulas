@@ -38,8 +38,71 @@ const altoDe = (f) => (esVideo(f) ? f.videoHeight : f.height);
 // para video: cuadricula chica donde se copia cada cuadro y de donde salen los colores
 let cuadricula = null; // { lienzo, lctx, columnas, filas, celdas, tabla }
 
+// Modo 3D: cada bolita mide CELDA_3D pixeles de pantalla (por la escala de
+// Windows); si la PC va lenta se agrandan (menos bolitas).
+const CELDA_3D = 8;
+const AGRANDA_3D = 1.18;   // bolitas un poco montadas para que no queden huecos
+const RELIEVE_3D = 0.06;   // cuanto sale hacia adelante lo claro (parte del alto)
+let calidad3d = 1;         // 1 = normal; mas grande = bolitas mas grandes
+
+// relieve de cada bolita: lo claro sale hacia adelante (-1) y lo oscuro va atras (1)
+function relieveDe(datos, k) {
+  return (datos[k * 4] * 0.3 + datos[k * 4 + 1] * 0.59 + datos[k * 4 + 2] * 0.11) / 255 * -2 + 1;
+}
+
+function formarDibujo3D(img) {
+  const W = motor.ancho, H = motor.alto;
+  const proporcion = anchoDe(img) / altoDe(img);
+  const celda = Math.max(4, Math.round(CELDA_3D * motor.escala * calidad3d));
+  let filas = Math.floor((H * tamano) / celda);
+  let columnas = Math.floor(filas * proporcion);
+  if (columnas * celda > W * tamano) {
+    columnas = Math.floor((W * tamano) / celda);
+    filas = Math.floor(columnas / proporcion);
+  }
+  columnas = Math.max(1, columnas); filas = Math.max(1, filas);
+
+  // colores y relieve de cada bolita (el relieve sale de la imagen difuminada
+  // para que no quede con pozos)
+  const lienzo = document.createElement("canvas");
+  lienzo.width = columnas;
+  lienzo.height = filas;
+  const lctx = lienzo.getContext("2d", { willReadFrequently: true });
+  lctx.drawImage(img, 0, 0, columnas, filas);
+  const datos = lctx.getImageData(0, 0, columnas, filas).data;
+  lctx.filter = "blur(1.5px)";
+  lctx.drawImage(img, 0, 0, columnas, filas);
+  const suave = lctx.getImageData(0, 0, columnas, filas).data;
+  lctx.filter = "blur(1px)";
+
+  const celdas = [];
+  for (let k = 0; k < columnas * filas; k++) if (esVideo(img) || datos[k * 4 + 3] >= 40) celdas.push(k);
+  cuadricula = esVideo(img) ? { lienzo, lctx, columnas, filas, celdas, tabla: new Float32Array(celdas.length) } : null;
+
+  const x0 = Math.round((W - columnas * celda) / 2);
+  const y0 = Math.round((H - filas * celda) / 2);
+  marco = { x: x0, y: y0, ancho: columnas * celda, alto: filas * celda };
+  const b = motor.bolitas;
+  b.tamano = celda * AGRANDA_3D;
+  b.relieve = RELIEVE_3D;
+  b.celda = [AGRANDA_3D / columnas, AGRANDA_3D / filas];
+  b.textura = img;
+  motor.fijarDestinos(celdas.length, (i) => {
+    const k = celdas[i];
+    const c = k % columnas, f = (k / columnas) | 0;
+    return [x0 + (c + 0.5) * celda, y0 + (f + 0.5) * celda,
+      colorRGBA(datos[k * 4], datos[k * 4 + 1], datos[k * 4 + 2]),
+      (c + 0.5) / columnas, (f + 0.5) / filas, relieveDe(suave, k)];
+  });
+}
+
 function formarDibujo(img) {
   imagenActual = img;
+  if (motor.bolitas) {
+    formarDibujo3D(img);
+    stateLabel.textContent = esVideo(img) ? "Pasa tu dedo indice por el video" : "Pasa tu dedo indice por el dibujo";
+    return;
+  }
   const W = motor.ancho, H = motor.alto;
   const proporcion = anchoDe(img) / altoDe(img);
   let punto = motor.punto;
@@ -223,7 +286,8 @@ let imagenReal = true;
 let opacidadReal = 0;
 
 function dibujarImagenReal(ctx) {
-  const objetivo = imagenReal && motor.quieto && marco ? 1 : 0;
+  // en 3D no hace falta: cada bolita ya muestra su pedacito de la imagen original
+  const objetivo = imagenReal && !motor.bolitas && motor.quieto && marco ? 1 : 0;
   // aparece suave (0,4 s) y se va al instante cuando algo se mueve
   opacidadReal = objetivo ? Math.min(1, opacidadReal + 0.04) : 0;
   if (opacidadReal <= 0 || !imagenActual) return;
@@ -246,6 +310,19 @@ function setTamano(v) {
 document.getElementById("tamanoDownBtn").addEventListener("click", () => setTamano(tamano - TAMANO_PASO));
 document.getElementById("tamanoUpBtn").addEventListener("click", () => setTamano(tamano + TAMANO_PASO));
 tamanoLabel.textContent = `${Math.round(tamano * 100)}%`;
+
+// boton "3D" (ver codigo/comun/bolitas3d.js)
+prepararBoton3D(motor, () => {
+  calidad3d = 1;
+  if (imagenActual) formarDibujo(imagenActual);
+});
+
+// si la PC va lenta en 3D: bolitas mas grandes (menos cantidad), hasta el doble
+motor.alLento = () => {
+  if (calidad3d >= 2 || !imagenActual) return;
+  calidad3d = Math.min(2, calidad3d * 1.25);
+  formarDibujo(imagenActual);
+};
 
 // al abrir: el ultimo video guardado, o si no, el ultimo dibujo
 if (localStorage.getItem(FUENTE_STORAGE_KEY) === "video") {
