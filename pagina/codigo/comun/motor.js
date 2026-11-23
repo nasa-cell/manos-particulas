@@ -239,10 +239,14 @@ function crearMotor(canvas) {
   function guardar3d(i, x, y, zExtra) {
     x -= centroX; y -= centroY;
     const z3 = z0[i] * relieve + zExtra;
+    // el relieve solo cambia el tamano de la bolita, no su lugar: asi cada
+    // bolita queda alineada con sus vecinas y las letras e imagenes salen
+    // derechas. Solo lo que sale volando (dedo, explosion) se abre en perspectiva.
     const k = foco / (foco + z3);
+    const kVuelo = foco / (foco + zExtra);
     const o = i * 4;
-    qx[i] = datos3d[o] = centroX + x * k;
-    qy[i] = datos3d[o + 1] = centroY + y * k;
+    qx[i] = datos3d[o] = centroX + x * kVuelo;
+    qy[i] = datos3d[o + 1] = centroY + y * kVuelo;
     datos3d[o + 2] = Math.max(-0.99, Math.min(0.99, z3 / H));
     datos3d[o + 3] = Math.max(1, tamano3d * k);
   }
